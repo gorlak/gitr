@@ -1,4 +1,2 @@
 #!/bin/bash
-
-shift
-$(dirname $0)/gitr.py $@
+$(dirname $0)/gitr.py "$@"
