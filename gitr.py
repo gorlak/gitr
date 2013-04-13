@@ -13,6 +13,7 @@ import pprint
 #  * write a prettier status task than git provides
 #  * express more actionable information in status
 #  * write a better diff command than git provides (show module commit descriptions)
+#  * support submodule removal / relocation via .gitrecurse
 
 
 #
