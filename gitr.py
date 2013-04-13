@@ -14,6 +14,7 @@ import pprint
 #  * express more actionable information in status
 #  * write a better diff command than git provides (show module commit descriptions)
 #  * support submodule removal / relocation via .gitrecurse
+#  * commit support for depth-first commit generation
 
 
 #
