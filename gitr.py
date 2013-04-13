@@ -8,9 +8,11 @@ import pprint
 
 
 # Todo:
-#  * groups driven by .gitrecurse config files
-#  * write a better status command than git provides
-#  * write a better diff command than git provides
+#  * make path referencing uniformly relative to rootPath (instead of cwd since it changes)
+#  * allow user defined groups of modules driven by .gitrecurse config files
+#  * write a prettier status task than git provides
+#  * express more actionable information in status
+#  * write a better diff command than git provides (show module commit descriptions)
 
 
 #
