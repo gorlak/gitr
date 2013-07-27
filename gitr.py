@@ -180,7 +180,7 @@ def pull( newCommit = None ):
 			submodule = parseSubmoduleStatus( line )
 
 			if submodule[ "new" ]:
-				run( "git submodule update --init -- " + submodule[ "path" ], exitOnFailure = True )
+				run( "git submodule update --init --recursive -- " + submodule[ "path" ], exitOnFailure = True )
 			else:
 				result = runAndCapture( "git diff -- " + submodule[ "path" ], exitOnFailure = True )
 				newSubmoduleCommit = None
