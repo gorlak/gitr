@@ -16,7 +16,7 @@ git pull
 git submodule update --init --recursive
 ```
 
-This covers the basics: fetch changes, merge changes from my tracking branch upstream, then update any modules that have changed.  However, if users fail to remember update submodules after pulling, they could very easily roll back the submodule to *thier* prior commit with a simple `git commit -a -m` invokation.  Also, if they have commited modifications to submodules in prior commits then the merge strategy to choose the proper submodule commit is murky.
+This covers the basics: fetch changes, merge changes from my tracking branch upstream, then update any modules that have changed.  However, if users fail to remember update submodules after pulling, they could very easily roll back the submodule to *their* prior commit with a simple `git commit -a -m` invokation.  Also, if they have commited modifications to submodules in prior commits then the merge strategy to choose the proper submodule commit is murky.
 
 gitr aims to improve submodule workflow in several ways:
 * `gitr pull` updates the repository and submodules in a single command.  There are no steps to forget, thus there is a decreased likelihood that other users' commits that change the submodule commit won't be rolled back if the user forgets to update his submodules before making a commit with -a.
