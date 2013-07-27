@@ -37,55 +37,69 @@ def currentPath():
 
 def pushPath( path ):
 	prevPath.append( os.path.abspath( os.getcwd() ) )
-	#print( ">>> " + os.path.abspath( path ) )
 	os.chdir( os.path.abspath( path ) )
 
 def popPath():
 	path = prevPath.pop()
-	#print( "<<< " + path )
 	os.chdir( path )
 
-def run( cmd ):
+def run( cmd, exitOnFailure = False ):
 	if verbose:
 		print( "\n[" + os.path.relpath( os.getcwd(), rootPath ) + "]: " + cmd )
-	return os.system( cmd )
 
-def runAndCapture( cmd ):
-	output = []
+	code = os.system( cmd )
+
+	if exitOnFailure:
+		if failed( code ):
+			print( cmd + " returned " + str( code ) + ", exiting with that code" )
+			exit( code )
+
+	return code
+
+def runAndCapture( cmd, exitOnFailure = False ):
 	if verbose:
 		print( "\n[" + os.path.relpath( os.getcwd(), rootPath ) + "]: " + cmd )
+
 	proc = subprocess.Popen( cmd, shell=True, stdout=subprocess.PIPE )
 
+	output = []
 	for line in proc.stdout:
 		output.append( line.decode("utf-8") );
 
 	proc.wait() # sets .returncode
-	result = collections.namedtuple('Result', ['code', 'output'])
-	return result( proc.returncode, output )
+	resultTuple = collections.namedtuple('Result', ['code', 'output'])
+	result = resultTuple( proc.returncode, output )
 
-def runRecursive( cmd ):
-	code = run( cmd )
+	if exitOnFailure:
+		if failed( result.code ):
+			print( cmd + " returned " + str( result.code ) + ", exiting with that code" )
+			exit( result.code )
+
+	return result
+
+def runRecursive( cmd, exitOnFailure = False ):
+	code = run( cmd, exitOnFailure )
 	if failed( code ):
 		return code
 
-	result = runAndCapture( "git submodule" )
-	if ( failed( result.code ) ):
+	cmd = "git submodule"
+	result = runAndCapture( cmd, exitOnFailure )
+	if failed( result.code ):
 		return result.code
 
 	for line in result.output:
-		#pprint.pprint( line )
 		submodule = parseSubmoduleStatus( line )
-		#pprint.pprint( submodule )
-
 		pushPath( submodule[ "path" ] )
-		code = runRecursive( cmd )
+		code = runRecursive( cmd, exitOnFailure )
 		popPath()
 
 		if failed( code ):
 			return code
 
 def parseSubmoduleStatus( status ):
-	match = re.match( "([\+\- ])(\w+) (.*) \((.*)\)", status )
+	match = re.match( "([\+\- ])(\w+) (.*) \(.*\)", status ) 
+	if not match: # sometimes we don't get a parenthetical at the end of the line
+		match = re.match( "([\+\- ])(\w+) (.*)", status )
 	if match:
 		result = {}
 		result[ 'commit' ] = match.group( 2 )
@@ -109,71 +123,37 @@ def do():
 		else:
 			cmd += " " + arg
 
-	code = runRecursive( cmd.strip() )
-	if failed( code ):
-		exit( code )
-
-	return 0
+	return runRecursive( cmd.strip(), exitOnFailure = True )
 
 def fetch():
 
-	cmd = "git fetch --recurse-submodules=yes"
-	code = run( cmd )
-	if failed( code ):
-		exit( code )
-
-	return 0
+	return run( "git fetch --recurse-submodules=yes", exitOnFailure = True )
 
 def headless( isRoot = True ):
 
 	if not isRoot:
-		cmd = "git rev-parse HEAD"
-		result = runAndCapture( cmd )
-		if failed( result.code ):
-			print( cmd + " returned " + str( result.code ) + ", exiting with that code" )
-			exit( result.code )
+		result = runAndCapture( "git rev-parse HEAD", exitOnFailure = True )
+		run( "git checkout -q " + result.output[0], exitOnFailure = True ) # `git checkout <commit>` won't touch workspace files, see git docs
 
-		# `git checkout <commit>` won't touch workspace files, see git docs
-		cmd = "git checkout -q " + result.output[0]
-		code = run( cmd )
-		if failed( code ):
-			print( cmd + " returned " + str( code ) + ", exiting with that code" )
-			exit( code )
-
-	result = runAndCapture( "git submodule" )
-	if failed( result.code ):
-		print( cmd + " returned " + str( result.code ) + ", exiting with that code" )
-		exit( code )
-
+	result = runAndCapture( "git submodule", exitOnFailure = True )
 	for line in result.output:
-		#pprint.pprint( line )
 		submodule = parseSubmoduleStatus( line )
-		#pprint.pprint( submodule )
-
 		pushPath( submodule[ "path" ] )
 		headless( False )
 		popPath()
 
 	return 0
 
-def pull( commitToCheckoutIfNotBranched = None ):
+def pull( newCommit = None ):
 
-	cmd = "git status --porcelain"
-	result = runAndCapture( cmd )
-	if failed( result.code ):
-		print( cmd + " returned " + str( result.code ) + ", exiting with that code" )
-		exit( result.code )
+	if not newCommit: # if we are the root
+		print( "Checking status..." )
+		result = runAndCapture( "git status --porcelain", exitOnFailure = True )
+		if len( result.output ):
+			print( "Please commit before pulling" )
+			exit( 1 )
 
-	if len( result.output ):
-		print( "Please commit before pulling" )
-		exit( 1 )
-
-	cmd = "git branch"
-	result = runAndCapture( cmd )
-	if failed( result.code ):
-		print( cmd + " returned " + str( result.code ) + ", exiting with that code" )
-		exit( result.code )
-
+	result = runAndCapture( "git branch", exitOnFailure = True )
 	isBranched = None
 	match = re.match( "\* \(no branch\)", result.output[0] )
 	if match:
@@ -182,61 +162,32 @@ def pull( commitToCheckoutIfNotBranched = None ):
 		isBranched = True
 
 	if isBranched:
-		print( "pulling " + currentPath() )
-		cmd = "git pull"
-		code = run( cmd )
-		if failed( code ):
-			print( cmd + " returned " + str( code ) + ", exiting with that code" )
-			exit( code )
+		print( "Pulling " + currentPath() )
+		run( "git pull", exitOnFailure = True )
 	else:
-		if not commitToCheckoutIfNotBranched:
-			print( "root is not on a branch" )
+		if not newCommit:
+			print( "Root is not on a branch" )
 			exit( 1 )
 
-		cmd = "git rev-parse HEAD"
-		result = runAndCapture( cmd )
-		if failed( result.code ):
-			print( cmd + " returned " + str( result.code ) + ", exiting with that code" )
-			exit( result.code )
+		result = runAndCapture( "git rev-parse HEAD", exitOnFailure = True )
+		if result.output[0].strip() != newCommit.strip():
+			print( "Checking out " + currentPath() + " to " + newCommit )
+			run( "git reset -q --hard " + newCommit, exitOnFailure = True )
 
-		if result.output[0].strip() != commitToCheckoutIfNotBranched.strip():
-			print( "checking out " + currentPath() + " to " + commitToCheckoutIfNotBranched )
-			cmd = "git reset -q --hard " + commitToCheckoutIfNotBranched
-			code = run( cmd )
-			if failed( code ):
-				print( cmd + " returned " + str( code ) + ", exiting with that code" )
-				exit( code )
-
-	result = runAndCapture( "git submodule status" )
-	if failed( result.code ):
-		print( cmd + " returned " + str( result.code ) + ", exiting with that code" )
-		exit( code )
-
+	result = runAndCapture( "git submodule status", exitOnFailure = True )
 	if len( result.output ):
 		for line in result.output:
-			#pprint.pprint( line )
 			submodule = parseSubmoduleStatus( line )
-			#pprint.pprint( submodule )
 
 			if submodule[ "new" ]:
-				cmd = "git submodule init -- " + submodule[ "path" ]
-				code = run( cmd )
-				if failed( code ):
-					print( cmd + " returned " + str( code ) + ", exiting with that code" )
-					exit( code )
+				run( "git submodule init -- " + submodule[ "path" ], exitOnFailure = True )
 			else:
-				cmd = "git diff -- " + submodule[ "path" ]
-				result = runAndCapture( cmd )
-				if ( failed( result.code ) ):
-					print( cmd + " returned " + str( code ) + ", exiting with that code" )
-					exit( result.code )
-
+				result = runAndCapture( "git diff -- " + submodule[ "path" ], exitOnFailure = True )
 				newSubmoduleCommit = None
 				for line in result.output:
 					match = re.match( "-Subproject commit (.*)", line )
 					if match:
 						newSubmoduleCommit = match.group(1)
-
 				if newSubmoduleCommit:
 					pushPath( submodule[ "path" ] )
 					pull( newSubmoduleCommit )
@@ -246,12 +197,7 @@ def pull( commitToCheckoutIfNotBranched = None ):
 
 def status():
 
-	cmd = "git branch"
-	result = runAndCapture( cmd )
-	if failed( result.code ):
-		print( cmd + " returned " + str( result.code ) + ", exiting with that code" )
-		exit( result.code )
-
+	result = runAndCapture( "git branch", exitOnFailure = True )
 	branch = None
 	match = re.match( "\* (.*)", result.output[0] )
 	if match and match.group(1) != "(no branch)":
@@ -262,15 +208,9 @@ def status():
 	else:
 		print( currentPath() + " is headless" )
 
-	result = runAndCapture( "git submodule" )
-	if failed( result.code ):
-		exit( result.code )
-
+	result = runAndCapture( "git submodule", exitOnFailure = True )
 	for line in result.output:
-		#pprint.pprint( line )
 		submodule = parseSubmoduleStatus( line )
-		#pprint.pprint( submodule )
-
 		pushPath( submodule[ "path" ] )
 		status()
 		popPath()
@@ -279,10 +219,7 @@ def status():
 
 def update():
 
-	cmd = "git submodule update --init --recursive"
-	code = run( cmd )
-	if failed( code ):
-		exit( code )
+	return run( "git submodule update --init --recursive", exitOnFailure = True )
 
 task = None
 if len( sys.argv ) > 1:
@@ -291,7 +228,7 @@ if len( sys.argv ) > 1:
 	else:
 		print( "\nUnknown command: " + sys.argv[1] + "\n" )
 
-if ( task != None ):
+if task:
 	exit( task() )
 else:
 	print( "Usage: " + sys.argv[0] + " <command> [arguments]" )
