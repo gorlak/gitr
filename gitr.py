@@ -147,7 +147,7 @@ def headless( isRoot = True ):
 def pull( newCommit = None ):
 
 	if not newCommit: # if we are the root
-		print( "Checking status..." )
+		print( "Checking status of " + currentPath() )
 		result = runAndCapture( "git status --porcelain", exitOnFailure = True )
 		if len( result.output ):
 			print( "Please commit before pulling" )
@@ -165,14 +165,11 @@ def pull( newCommit = None ):
 		print( "Pulling " + currentPath() )
 		run( "git pull", exitOnFailure = True )
 	else:
-		if not newCommit:
-			print( "Root is not on a branch" )
-			exit( 1 )
-
-		result = runAndCapture( "git rev-parse HEAD", exitOnFailure = True )
-		if result.output[0].strip() != newCommit.strip():
-			print( "Checking out " + currentPath() + " to " + newCommit )
-			run( "git reset -q --hard " + newCommit, exitOnFailure = True )
+		if newCommit:
+			result = runAndCapture( "git rev-parse HEAD", exitOnFailure = True )
+			if result.output[0].strip() != newCommit.strip():
+				print( "Checking out " + currentPath() + " to " + newCommit )
+				run( "git reset -q --hard " + newCommit, exitOnFailure = True )
 
 	result = runAndCapture( "git submodule status", exitOnFailure = True )
 	if len( result.output ):
@@ -188,10 +185,9 @@ def pull( newCommit = None ):
 					match = re.match( "-Subproject commit (.*)", line )
 					if match:
 						newSubmoduleCommit = match.group(1)
-				if newSubmoduleCommit:
-					pushPath( submodule[ "path" ] )
-					pull( newSubmoduleCommit )
-					popPath()
+				pushPath( submodule[ "path" ] )
+				pull( newSubmoduleCommit )
+				popPath()
 
 	return 0
 
