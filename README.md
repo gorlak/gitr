@@ -23,6 +23,11 @@ gitr aims to improve submodule workflow in several ways:
 * `gitr pull` requires users have a pristine worktree to pull.  As a best practice, being fully committed before pulling ensures the preservation of history of which commit in the submodule was last functional in the parent worktree.  Also, this encourages users to commit any updates of a submodule commit id into the parent repository before pulling the parent.  If there is an uncommitted submodule commit id when doing a pull+update, work could be lost as the subsequent submodule update may completely skip the prior uncomitted submodule commit id (since there is no conflict resolution against uncommitted submodules in the worktree).
 * `gitr pull` will perform pull operations (instead of headless checkouts) in submodules if that submodule is checked out to a branch, merging from their tracking branch on the associated remote (it literally runs `git pull` whithin that submodule).  This leaves branches that users have made commits to recently in a branch-checkout state instead of a headless state, which is much more friendly for future commit generation.
 
+gitr push
+---------
+
+Push updates the submodule branch HEAD (and dependent commits) on the corresponding remote, but only for submodules following a branch (it won't push submodules checked out to a headless commit).  This is handy for when you want to double check that you didn't overlook pushing commits in submodules when generating commits in parent repos.
+
 gitr headless
 -------------
 
