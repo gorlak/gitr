@@ -191,6 +191,31 @@ def pull( newCommit = None ):
 
 	return 0
 
+def push():
+
+	result = runAndCapture( "git submodule status", exitOnFailure = True )
+	if len( result.output ):
+		for line in result.output:
+			submodule = parseSubmoduleStatus( line )
+
+			pushPath( submodule[ "path" ] )
+			push()
+			popPath()
+
+	result = runAndCapture( "git branch", exitOnFailure = True )
+	isBranched = None
+	match = re.match( "\* \(no branch\)", result.output[0] )
+	if match:
+		isBranched = False
+	else:
+		isBranched = True
+
+	if isBranched:
+		print( "Pushing " + currentPath() )
+		run( "git push", exitOnFailure = True )
+
+	return 0
+
 def status():
 
 	result = runAndCapture( "git branch", exitOnFailure = True )
@@ -233,5 +258,6 @@ else:
 	print( "  fetch    -- shorthand for `git fetch --recurse-submodules=yes`" )
 	print( "  headless -- change all submodules to not follow any branch (headless checkout of HEAD)" )
 	print( "  pull     -- fetch and merge such that submodules following branches pull to the latest branch HEAD" )
+	print( "  push     -- push submodules following branches to their respective remote" )
 	print( "  status   -- enhanced status information about submodules")
 	print( "  update   -- shorthand for `git submodule update --init --recursive`" )
