@@ -156,13 +156,6 @@ def headless( isRoot = True ):
 
 def pull( newCommit = None ):
 
-	if not newCommit: # if we are the root
-		print( "Checking status of " + currentPath() )
-		result = runAndCapture( "git status --porcelain", exitOnFailure = True )
-		if len( result.output ):
-			print( "Please commit before pulling" )
-			exit( 1 )
-
 	result = runAndCapture( "git branch", exitOnFailure = True )
 	if getBranch( result.output[0] ) != None:
 		print( "Pulling " + currentPath() )
