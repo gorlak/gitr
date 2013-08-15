@@ -110,15 +110,19 @@ def parseSubmoduleStatus( status ):
 	else:
 		die( "Unable to parse submodule status: " + status )
 
-def getBranch( branchStatus ):
-	branch = None
-	match = re.match( "\* (.*)", branchStatus )
-	if match and match.group(1) != "(no branch)":
-		branch = match.group(1)
-		match = re.match( "\(detached from [a-f0-9]+\)", branch)
+def getBranch( result ):
+	for line in result.output:
+		match = re.match( "\* (.*)", line )
 		if match:
-			branch = None
-	return branch
+			branch = match.group(1)
+			if branch == "(no branch)":
+				return None
+			else:
+				match = re.match( "\(detached from [a-f0-9]+\)", branch)
+				if match:
+					return None
+			return branch
+	return None
 
 #
 # Tasks (callable from the frontend)
@@ -156,8 +160,7 @@ def headless( isRoot = True ):
 
 def pull( newCommit = None ):
 
-	result = runAndCapture( "git branch", exitOnFailure = True )
-	if getBranch( result.output[0] ) != None:
+	if getBranch( runAndCapture( "git branch", exitOnFailure = True ) ) != None:
 		print( "Pulling " + currentPath() )
 		run( "git pull", exitOnFailure = True )
 	else:
@@ -198,8 +201,7 @@ def push():
 			push()
 			popPath()
 
-	result = runAndCapture( "git branch", exitOnFailure = True )
-	if getBranch( result.output[0] ) != None:
+	if getBranch( runAndCapture( "git branch", exitOnFailure = True ) ) != None:
 		print( "Pushing " + currentPath() )
 		run( "git push", exitOnFailure = True )
 
@@ -207,8 +209,7 @@ def push():
 
 def status():
 
-	result = runAndCapture( "git branch", exitOnFailure = True )
-	branch = getBranch( result.output[0] )
+	branch = getBranch( runAndCapture( "git branch", exitOnFailure = True ) )
 	if branch:
 		print( currentPath() + " is on branch " + branch )
 	else:
