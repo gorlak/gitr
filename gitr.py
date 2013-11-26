@@ -167,6 +167,8 @@ def pull( newCommit = None ):
 		if newCommit:
 			result = runAndCapture( "git rev-parse HEAD", exitOnFailure = True )
 			if result.output[0].strip() != newCommit.strip():
+				print( "Fetching tags for " + currentPath() )
+				run( "git fetch --tags", exitOnFailure = True )
 				print( "Checking out " + currentPath() + " to " + newCommit )
 				run( "git reset -q --hard " + newCommit, exitOnFailure = True )
 
