@@ -118,7 +118,7 @@ def getBranch( result ):
 			if branch == "(no branch)":
 				return None
 			else:
-				match = re.match( "\(detached from [a-f0-9]+\)", branch)
+				match = re.match( "\(detached from .+\)", branch)
 				if match:
 					return None
 			return branch
