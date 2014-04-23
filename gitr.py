@@ -89,12 +89,13 @@ def runRecursive( cmd, exitOnFailure = False ):
 
 	for line in result.output:
 		submodule = parseSubmoduleStatus( line )
-		pushPath( submodule[ "path" ] )
-		code = runRecursive( cmd, exitOnFailure )
-		popPath()
+		if submodule[ "path" ][:2] != "..":
+			pushPath( submodule[ "path" ] )
+			code = runRecursive( cmd, exitOnFailure )
+			popPath()
 
-		if failed( code ):
-			return code
+			if failed( code ):
+				return code
 
 def parseSubmoduleStatus( status ):
 	match = re.match( "([\+\- ])(\w+) (.*) \(.*\)", status ) 
@@ -152,9 +153,10 @@ def headless( isRoot = True ):
 	result = runAndCapture( "git submodule", exitOnFailure = True )
 	for line in result.output:
 		submodule = parseSubmoduleStatus( line )
-		pushPath( submodule[ "path" ] )
-		headless( False )
-		popPath()
+		if submodule[ "path" ][:2] != "..":
+			pushPath( submodule[ "path" ] )
+			headless( False )
+			popPath()
 
 	return 0
 
@@ -176,19 +178,19 @@ def pull( newCommit = None ):
 	if len( result.output ):
 		for line in result.output:
 			submodule = parseSubmoduleStatus( line )
-
-			if submodule[ "new" ]:
-				run( "git submodule update --init --recursive -- " + submodule[ "path" ], exitOnFailure = True )
-			else:
-				result = runAndCapture( "git diff -- " + submodule[ "path" ], exitOnFailure = True )
-				newSubmoduleCommit = None
-				for line in result.output:
-					match = re.match( "-Subproject commit (.*)", line )
-					if match:
-						newSubmoduleCommit = match.group(1)
-				pushPath( submodule[ "path" ] )
-				pull( newSubmoduleCommit )
-				popPath()
+			if submodule[ "path" ][:2] != "..":
+				if submodule[ "new" ]:
+					run( "git submodule update --init --recursive -- " + submodule[ "path" ], exitOnFailure = True )
+				else:
+					result = runAndCapture( "git diff -- " + submodule[ "path" ], exitOnFailure = True )
+					newSubmoduleCommit = None
+					for line in result.output:
+						match = re.match( "-Subproject commit (.*)", line )
+						if match:
+							newSubmoduleCommit = match.group(1)
+					pushPath( submodule[ "path" ] )
+					pull( newSubmoduleCommit )
+					popPath()
 
 	return 0
 
@@ -198,10 +200,10 @@ def push():
 	if len( result.output ):
 		for line in result.output:
 			submodule = parseSubmoduleStatus( line )
-
-			pushPath( submodule[ "path" ] )
-			push()
-			popPath()
+			if submodule[ "path" ][:2] != "..":
+				pushPath( submodule[ "path" ] )
+				push()
+				popPath()
 
 	if getBranch( runAndCapture( "git branch", exitOnFailure = True ) ) != None:
 		print( "Pushing " + currentPath() )
@@ -220,9 +222,10 @@ def status():
 	result = runAndCapture( "git submodule", exitOnFailure = True )
 	for line in result.output:
 		submodule = parseSubmoduleStatus( line )
-		pushPath( submodule[ "path" ] )
-		status()
-		popPath()
+		if submodule[ "path" ][:2] != "..":
+			pushPath( submodule[ "path" ] )
+			status()
+			popPath()
 
 	return 0
 
