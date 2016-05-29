@@ -125,6 +125,9 @@ def getBranch( result ):
 				match = re.match( "\(HEAD detached at .+\)", branch)
 				if match:
 					return None
+				match = re.match( "\(HEAD detached from .+\)", branch)
+				if match:
+					return None
 			return branch
 	return None
 
